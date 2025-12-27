@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Time Tracker Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Work History</h1>
+        <div id="stats"></div>
+        <table id="historyTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Duration</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+    async function loadDashboard() {
+        try {
+            console.log("Fetching history...");
+            const response = await fetch('/history.json');
+            
+            if (!response.ok) {
+                throw new Error("Could not find history.json");
+            }
+
+            const data = await response.json();
+            console.log("Data received:", data);
+
+            const tbody = document.querySelector('#historyTable tbody');
+            const statsDiv = document.querySelector('#stats');
+
+            // Handle the case where the file is empty or not an array
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3">No sessions recorded yet. Start tracking!</td></tr>';
+                return;
+            }
+
+            // Clear existing content
+            tbody.innerHTML = '';
+
+            // Render the rows
+            data.slice().reverse().forEach(session => {
+                const row = document.createElement('tr');
+                const date = new Date(session.start_time).toLocaleDateString();
+                
+                // Duration logic
+                const totalSeconds = Math.floor(session.duration / 1000000000);
+                const mins = Math.floor(totalSeconds / 60);
+                const secs = totalSeconds % 60;
+
+                row.innerHTML = `
+                    <td>${date}</td>
+                    <td><strong>${session.category}</strong></td>
+                    <td>${mins}m ${secs}s</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+        } catch (err) {
+            console.error("Dashboard Error:", err);
+            document.querySelector('#stats').innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
+        }
+    }
+
+    // Run the function when the page loads
+    loadDashboard();
+    </script>
+</body>
+</html>

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
   "fmt"
 	"os"
+  "net/http"
 	"time"
 )
 
@@ -63,13 +64,16 @@ func stopSession() error {
   historyData, err := os.ReadFile("history.json")
 
   if err == nil {
-    json.Unmarshal(historyData, &history)
-
+    err = json.Unmarshal(historyData, &history)
+    if err != nil {
+        fmt.Println("Warning: Could not parse history.json as a list. Starting fresh list.")
+        history = []Session{} 
+    }
   }
 
   history = append(history, session)
 
-  finalData, err := json.MarshalIndent(session, "", " ")
+  finalData, err := json.MarshalIndent(history, "", " ")
   if err != nil {
     return err
   }
@@ -96,6 +100,17 @@ func checkStatus() {
 	elapsed := time.Since(active.StartTime).Round(time.Second)
 	fmt.Printf("Currently tracking: %s\n", active.Category)
 	fmt.Printf("Time elapsed: %s\n", elapsed)
+}
+
+func startServer() {
+  fs := http.FileServer(http.Dir("."))
+  http.Handle("/", fs)
+
+  fmt.Println("📊 Dashboard available at: http://localhost:8080")
+  err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		fmt.Printf("Error starting server: %v\n", err)
+	}
 }
 
 func main() {
@@ -127,6 +142,8 @@ func main() {
     }
   case "status":
     checkStatus()
+  case "serve":
+    startServer()
   default:
     fmt.Println("Unknown command. Use: start, stop, status.")
   }
