@@ -189,7 +189,7 @@ func onReady() {
 				systray.SetTitle("🚀 reading")
 			case <-mStop.ClickedCh:
 				stopSession()
-				systray.SetTitle("🕒 Idle")
+				systray.SetTitle("🕒")
 			case <-mQuit.ClickedCh:
 				systray.Quit()
 			}
