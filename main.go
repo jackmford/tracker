@@ -1,11 +1,11 @@
 package main
 
 import (
-	"encoding/json"
+  "encoding/json"
   "fmt"
-	"os"
+  "os"
   "net/http"
-	"time"
+  "time"
 )
 
 type Session struct {
@@ -24,9 +24,9 @@ type ActiveSession struct {
 
 func startSession(category string) error {
   if _, err := os.Stat("active.json"); err == nil {
-		fmt.Println("A session is already running. Stop it before starting a new one.")
-		return nil
-	}
+    fmt.Println("A session is already running. Stop it before starting a new one.")
+    return nil
+  }
   active := ActiveSession{
     Category: category,
     StartTime: time.Now(),
@@ -66,8 +66,8 @@ func stopSession() error {
   if err == nil {
     err = json.Unmarshal(historyData, &history)
     if err != nil {
-        fmt.Println("Warning: Could not parse history.json as a list. Starting fresh list.")
-        history = []Session{} 
+      fmt.Println("Warning: Could not parse history.json as a list. Starting fresh list.")
+      history = []Session{} 
     }
   }
 
@@ -88,18 +88,18 @@ func stopSession() error {
 }
 
 func checkStatus() {
-	data, err := os.ReadFile("active.json")
-	if err != nil {
-		fmt.Println("No active session running.")
-		return
-	}
+  data, err := os.ReadFile("active.json")
+  if err != nil {
+    fmt.Println("No active session running.")
+    return
+  }
 
-	var active ActiveSession
-	json.Unmarshal(data, &active)
+  var active ActiveSession
+  json.Unmarshal(data, &active)
 
-	elapsed := time.Since(active.StartTime).Round(time.Second)
-	fmt.Printf("Currently tracking: %s\n", active.Category)
-	fmt.Printf("Time elapsed: %s\n", elapsed)
+  elapsed := time.Since(active.StartTime).Round(time.Second)
+  fmt.Printf("Currently tracking: %s\n", active.Category)
+  fmt.Printf("Time elapsed: %s\n", elapsed)
 }
 
 func startServer() {
@@ -108,9 +108,9 @@ func startServer() {
 
   fmt.Println("📊 Dashboard available at: http://localhost:8080")
   err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		fmt.Printf("Error starting server: %v\n", err)
-	}
+  if err != nil {
+    fmt.Printf("Error starting server: %v\n", err)
+  }
 }
 
 func main() {
@@ -120,7 +120,7 @@ func main() {
   }
 
   command := os.Args[1]
-  
+
   switch command {
   case "start":
     if len(os.Args) < 3 {
@@ -134,7 +134,7 @@ func main() {
     }
   case "stop": 
     err := stopSession()
-    
+
     if err != nil {
       fmt.Printf("Error stopping session: %v\n", err)
     } else {
