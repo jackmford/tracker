@@ -39,7 +39,7 @@ function updateTable(sessions) {
     const tbody = document.querySelector('#historyTable tbody');
     tbody.innerHTML = '';
 
-    sessions.slice().reverse().forEach(s => {
+    sessions.reverse().forEach(s => {
         const date = new Date(s.start_time).toLocaleDateString();
         const mins = Math.floor(s.duration / 1e9 / 60);
         const secs = Math.floor((s.duration / 1e9) % 60);
