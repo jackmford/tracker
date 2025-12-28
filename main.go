@@ -3,7 +3,9 @@ package main
 import (
   "encoding/json"
   "fmt"
+  "github.com/getlantern/systray"
   "os"
+  "os/user"
   "net/http"
   "time"
 )
@@ -22,8 +24,14 @@ type ActiveSession struct {
   StartTime time.Time `json:"start_time"`
 }
 
+func getFilePath(fileName string) string {
+    usr, _ := user.Current()
+    // This puts the files in your home folder (e.g., /Users/jack/history.json)
+    return usr.HomeDir + "/" + fileName
+}
+
 func startSession(category string) error {
-  if _, err := os.Stat("active.json"); err == nil {
+  if _, err := os.Stat(getFilePath("active.json")); err == nil {
     fmt.Println("A session is already running. Stop it before starting a new one.")
     return nil
   }
@@ -37,11 +45,11 @@ func startSession(category string) error {
     return err
   }
 
-  return os.WriteFile("active.json", data, 0644)
+  return os.WriteFile(getFilePath("active.json"), data, 0644)
 }
 
 func stopSession() error {
-  data, err := os.ReadFile("active.json")
+  data, err := os.ReadFile(getFilePath("active.json"))
   if err != nil {
     return err
   }
@@ -61,7 +69,7 @@ func stopSession() error {
   }
 
   var history []Session
-  historyData, err := os.ReadFile("history.json")
+  historyData, err := os.ReadFile(getFilePath("history.json"))
 
   if err == nil {
     err = json.Unmarshal(historyData, &history)
@@ -78,20 +86,20 @@ func stopSession() error {
     return err
   }
 
-  err = os.WriteFile("history.json", finalData, 0644)
+  err = os.WriteFile(getFilePath("history.json"), finalData, 0644)
   if err != nil {
     return err
   }
 
-  return os.Remove("active.json")
+  return os.Remove(getFilePath("active.json"))
 
 }
 
-func checkStatus() {
-  data, err := os.ReadFile("active.json")
+func checkStatus() (string, error) {
+  data, err := os.ReadFile(getFilePath("active.json"))
   if err != nil {
     fmt.Println("No active session running.")
-    return
+    return "", err
   }
 
   var active ActiveSession
@@ -100,6 +108,8 @@ func checkStatus() {
   elapsed := time.Since(active.StartTime).Round(time.Second)
   fmt.Printf("Currently tracking: %s\n", active.Category)
   fmt.Printf("Time elapsed: %s\n", elapsed)
+
+  return active.Category, nil
 }
 
 func startServer() {
@@ -113,7 +123,7 @@ func startServer() {
   }
 }
 
-func main() {
+func handleCli() {
   if len(os.Args) < 2 {
     fmt.Println("Usage tracker [start <category> | stop | status]")
     return
@@ -147,6 +157,53 @@ func main() {
   default:
     fmt.Println("Unknown command. Use: start, stop, status.")
   }
+}
 
+func onReady() {
+  _, err := os.Stat(getFilePath("active.json"))
+  if err == nil {
+    cat, _ := checkStatus()
+    if cat == "" {cat = "Active"}
+    title := fmt.Sprintf("🚀 %s", cat)
+    systray.SetTitle(title)
+  } else{
+    systray.SetTitle("🕒")
+    systray.SetTooltip("Time Tracker")
+  }
 
+  mProgramming := systray.AddMenuItem("Start: Programming", "Start tracking programming")
+	mReading := systray.AddMenuItem("Start: Reading", "Start tracking reading")
+	systray.AddSeparator()
+	mStop := systray.AddMenuItem("Stop Tracking", "Stop the current session")
+	systray.AddSeparator()
+	mQuit := systray.AddMenuItem("Quit", "Quit the app")
+
+  go func() {
+		for {
+			select {
+			case <-mProgramming.ClickedCh:
+				startSession("programming")
+				systray.SetTitle("🚀 programming")
+			case <-mReading.ClickedCh:
+				startSession("reading")
+				systray.SetTitle("🚀 reading")
+			case <-mStop.ClickedCh:
+				stopSession()
+				systray.SetTitle("🕒 Idle")
+			case <-mQuit.ClickedCh:
+				systray.Quit()
+			}
+		}
+	}()
+}
+
+func onExit() {}
+
+func main() {
+  if len(os.Args) > 1 {
+		handleCli() // Move your old switch statement here
+		return
+	}
+
+  systray.Run(onReady, onExit)
 }
