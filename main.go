@@ -26,7 +26,6 @@ type ActiveSession struct {
 
 func getFilePath(fileName string) string {
     usr, _ := user.Current()
-    // This puts the files in your home folder (e.g., /Users/jack/history.json)
     return usr.HomeDir + "/" + fileName
 }
 
@@ -116,6 +115,10 @@ func startServer() {
   fs := http.FileServer(http.Dir("."))
   http.Handle("/", fs)
 
+  http.HandleFunc("/history.json", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, getFilePath("history.json"))
+  })
+
   fmt.Println("📊 Dashboard available at: http://localhost:8080")
   err := http.ListenAndServe(":8080", nil)
   if err != nil {
@@ -173,6 +176,8 @@ func onReady() {
 
   mProgramming := systray.AddMenuItem("Start: Programming", "Start tracking programming")
 	mReading := systray.AddMenuItem("Start: Reading", "Start tracking reading")
+	mWriting := systray.AddMenuItem("Start: Writing", "Start tracking writing")
+	mAdmin := systray.AddMenuItem("Start: Admin", "Start tracking admin")
 	systray.AddSeparator()
 	mStop := systray.AddMenuItem("Stop Tracking", "Stop the current session")
 	systray.AddSeparator()
@@ -187,6 +192,12 @@ func onReady() {
 			case <-mReading.ClickedCh:
 				startSession("reading")
 				systray.SetTitle("🚀 reading")
+			case <-mWriting.ClickedCh:
+				startSession("writing")
+				systray.SetTitle("🚀 writing")
+			case <-mAdmin.ClickedCh:
+				startSession("admin")
+				systray.SetTitle("🚀 admin")
 			case <-mStop.ClickedCh:
 				stopSession()
 				systray.SetTitle("🕒")
