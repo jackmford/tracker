@@ -224,7 +224,7 @@ func onReady() {
 
       current, _ := checkStatus() 
       if current == nextCategory {
-          return
+        continue
       }
 
       stopSession()
