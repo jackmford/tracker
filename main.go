@@ -222,6 +222,11 @@ func onReady() {
           return
       }
 
+      current, _ := checkStatus() 
+      if current == nextCategory {
+          return
+      }
+
       stopSession()
       startSession(nextCategory)
       updateTitle()
