@@ -48,6 +48,10 @@ func startSession(category string) error {
 }
 
 func stopSession() error {
+  if _, err := os.Stat(getFilePath("active.json")); os.IsNotExist(err) {
+    return nil
+  }
+
   data, err := os.ReadFile(getFilePath("active.json"))
   if err != nil {
     return err
@@ -162,17 +166,30 @@ func handleCli() {
   }
 }
 
+func updateTitle() {
+	data, err := os.ReadFile(getFilePath("active.json"))
+	if err != nil {
+		systray.SetTitle("🕒")
+		return
+	}
+
+	var active ActiveSession
+	if err := json.Unmarshal(data, &active); err == nil {
+		duration := time.Since(active.StartTime).Round(time.Minute)
+		title := fmt.Sprintf("🚀 %s (%dm)", active.Category, int(duration.Minutes()))
+		systray.SetTitle(title)
+	}
+}
+
 func onReady() {
-  _, err := os.Stat(getFilePath("active.json"))
-  if err == nil {
-    cat, _ := checkStatus()
-    if cat == "" {cat = "Active"}
-    title := fmt.Sprintf("🚀 %s", cat)
-    systray.SetTitle(title)
-  } else{
-    systray.SetTitle("🕒")
-    systray.SetTooltip("Time Tracker")
-  }
+  updateTitle()
+
+  go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		for range ticker.C {
+			updateTitle()
+		}
+	}()
 
   mProgramming := systray.AddMenuItem("Start: Programming", "Start tracking programming")
 	mReading := systray.AddMenuItem("Start: Reading", "Start tracking reading")
@@ -184,35 +201,39 @@ func onReady() {
 	mQuit := systray.AddMenuItem("Quit", "Quit the app")
 
   go func() {
-		for {
-			select {
-			case <-mProgramming.ClickedCh:
-				startSession("programming")
-				systray.SetTitle("🚀 programming")
-			case <-mReading.ClickedCh:
-				startSession("reading")
-				systray.SetTitle("🚀 reading")
-			case <-mWriting.ClickedCh:
-				startSession("writing")
-				systray.SetTitle("🚀 writing")
-			case <-mAdmin.ClickedCh:
-				startSession("admin")
-				systray.SetTitle("🚀 admin")
-			case <-mStop.ClickedCh:
-				stopSession()
-				systray.SetTitle("🕒")
-			case <-mQuit.ClickedCh:
-				systray.Quit()
-			}
-		}
-	}()
+    for {
+      var nextCategory string
+
+      select {
+      case <-mProgramming.ClickedCh:
+          nextCategory = "programming"
+      case <-mReading.ClickedCh:
+          nextCategory = "reading"
+      case <-mWriting.ClickedCh:
+          nextCategory = "writing"
+      case <-mAdmin.ClickedCh:
+          nextCategory = "admin"
+      case <-mStop.ClickedCh:
+          stopSession()
+          updateTitle()
+          continue // Skip the start logic below
+      case <-mQuit.ClickedCh:
+          systray.Quit()
+          return
+      }
+
+      stopSession()
+      startSession(nextCategory)
+      updateTitle()
+    }
+  }()
 }
 
 func onExit() {}
 
 func main() {
   if len(os.Args) > 1 {
-		handleCli() // Move your old switch statement here
+		handleCli()
 		return
 	}
 
